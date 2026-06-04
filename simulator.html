@@ -1,0 +1,707 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>MCP Helpdesk Simulator</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Syne:wght@400;600;700;800&family=Inter:wght@400;500&display=swap" rel="stylesheet"/>
+<style>
+  :root {
+    --bg: #0d0f14;
+    --surface: #141720;
+    --surface2: #1c2030;
+    --border: #2a2f42;
+    --border2: #363d56;
+    --text: #e8eaf0;
+    --muted: #7a829a;
+    --accent: #4f8ef7;
+    --accent2: #7c5ff7;
+    --green: #3dd68c;
+    --amber: #f5a623;
+    --red: #f25c5c;
+    --shared: #3dd68c;
+    --tenant: #a78bfa;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    min-height: 100vh;
+    line-height: 1.6;
+  }
+
+  /* LAYOUT */
+  .app { display: grid; grid-template-columns: 300px 1fr; grid-template-rows: auto 1fr; min-height: 100vh; }
+  header {
+    grid-column: 1 / -1;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 16px 28px;
+    display: flex; align-items: center; gap: 16px;
+  }
+  header .logo {
+    font-family: 'Syne', sans-serif;
+    font-size: 18px;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+    color: var(--text);
+  }
+  header .logo span { color: var(--accent); }
+  header .badge {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    background: #1a2040;
+    color: var(--accent);
+    border: 1px solid #2a3870;
+    padding: 3px 8px;
+    border-radius: 4px;
+    letter-spacing: 0.5px;
+  }
+  header .tag {
+    margin-left: auto;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+  }
+
+  /* SIDEBAR */
+  aside {
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    padding: 20px;
+    display: flex; flex-direction: column; gap: 24px;
+  }
+  .section-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 1.5px;
+    color: var(--muted);
+    text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+  .tenant-btn {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 14px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.15s;
+    color: var(--text);
+    font-size: 13px;
+    font-family: 'Inter', sans-serif;
+    width: 100%;
+    text-align: left;
+    margin-bottom: 6px;
+  }
+  .tenant-btn:hover { border-color: var(--accent); background: #161a2a; }
+  .tenant-btn.active { border-color: var(--accent); background: #1a2040; }
+  .tenant-btn .dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .tenant-btn .tid {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    color: var(--muted);
+    margin-left: auto;
+  }
+
+  .articles-list { display: flex; flex-direction: column; gap: 4px; }
+  .art-item {
+    padding: 8px 10px;
+    border-radius: 6px;
+    font-size: 12px;
+    border: 1px solid transparent;
+    cursor: default;
+  }
+  .art-item .art-title { color: var(--text); font-size: 12px; margin-bottom: 2px; }
+  .art-item .art-tid {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+  }
+  .art-item.shared { background: rgba(61,214,140,0.05); border-color: rgba(61,214,140,0.15); }
+  .art-item.shared .art-tid { color: var(--shared); }
+  .art-item.tenant-own { background: rgba(167,139,250,0.06); border-color: rgba(167,139,250,0.2); }
+  .art-item.tenant-own .art-tid { color: var(--tenant); }
+  .art-item.locked { opacity: 0.35; }
+  .art-item.locked .art-tid { color: var(--red); }
+
+  /* MAIN */
+  main { display: flex; flex-direction: column; overflow: hidden; }
+
+  .query-area {
+    padding: 24px 28px 16px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+  }
+  .query-row { display: flex; gap: 10px; align-items: flex-end; }
+  .query-label {
+    font-size: 11px;
+    color: var(--muted);
+    font-family: 'IBM Plex Mono', monospace;
+    margin-bottom: 8px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .query-label .tid-pill {
+    background: #1a2040;
+    color: var(--accent);
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 10px;
+    border: 1px solid #2a3870;
+  }
+  textarea {
+    flex: 1;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    padding: 12px 14px;
+    resize: none;
+    height: 56px;
+    transition: border-color 0.15s;
+    line-height: 1.5;
+  }
+  textarea:focus { outline: none; border-color: var(--accent); }
+  textarea::placeholder { color: var(--muted); }
+  .send-btn {
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    padding: 0 20px;
+    height: 56px;
+    cursor: pointer;
+    font-family: 'Syne', sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+    transition: all 0.15s;
+    white-space: nowrap;
+  }
+  .send-btn:hover { background: #3a7ef5; }
+  .send-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .presets { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+  .preset-chip {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--muted);
+    font-size: 11px;
+    padding: 4px 10px;
+    border-radius: 20px;
+    cursor: pointer;
+    transition: all 0.15s;
+    font-family: 'IBM Plex Mono', monospace;
+  }
+  .preset-chip:hover { border-color: var(--accent2); color: var(--accent2); background: rgba(124,95,247,0.08); }
+
+  /* TRACE PANEL */
+  .trace-panel {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px 28px;
+    display: flex; flex-direction: column; gap: 16px;
+  }
+  .trace-panel::-webkit-scrollbar { width: 4px; }
+  .trace-panel::-webkit-scrollbar-track { background: transparent; }
+  .trace-panel::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 4px; }
+
+  .empty-state {
+    margin: auto;
+    text-align: center;
+    color: var(--muted);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    opacity: 0.5;
+  }
+  .empty-state .big { font-size: 36px; margin-bottom: 12px; opacity: 0.3; }
+
+  /* TRACE CARDS */
+  .trace-block {
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+    animation: fadeIn 0.25s ease;
+  }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+
+  .trace-header {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 14px;
+    background: var(--surface2);
+    border-bottom: 1px solid var(--border);
+    cursor: pointer;
+    user-select: none;
+  }
+  .trace-header:hover { background: #1f2538; }
+  .step-badge {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-weight: 500;
+    letter-spacing: 0.3px;
+  }
+  .step-client { background: rgba(79,142,247,0.15); color: var(--accent); border: 1px solid rgba(79,142,247,0.3); }
+  .step-mcp    { background: rgba(61,214,140,0.1); color: var(--green); border: 1px solid rgba(61,214,140,0.25); }
+  .step-server { background: rgba(245,166,35,0.1); color: var(--amber); border: 1px solid rgba(245,166,35,0.25); }
+  .step-response { background: rgba(167,139,250,0.1); color: var(--tenant); border: 1px solid rgba(167,139,250,0.3); }
+  .step-error  { background: rgba(242,92,92,0.1); color: var(--red); border: 1px solid rgba(242,92,92,0.3); }
+
+  .trace-title { font-size: 13px; font-weight: 500; color: var(--text); }
+  .trace-chevron { margin-left: auto; color: var(--muted); font-size: 12px; transition: transform 0.2s; }
+  .trace-chevron.open { transform: rotate(180deg); }
+
+  .trace-body {
+    padding: 14px;
+    background: var(--bg);
+  }
+  .trace-body pre {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    color: #a8b4d0;
+    white-space: pre-wrap;
+    word-break: break-word;
+    line-height: 1.7;
+  }
+  .trace-body pre .key { color: #7c9ef5; }
+  .trace-body pre .str { color: #98d98e; }
+  .trace-body pre .num { color: var(--amber); }
+  .trace-body pre .bool { color: var(--tenant); }
+
+  /* ANSWER CARD */
+  .answer-card {
+    background: linear-gradient(135deg, #141a2e 0%, #1a1528 100%);
+    border: 1px solid #2a3060;
+    border-radius: 10px;
+    padding: 18px 20px;
+    animation: fadeIn 0.3s ease;
+  }
+  .answer-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    color: var(--accent);
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    margin-bottom: 12px;
+  }
+  .answer-text { font-size: 14px; line-height: 1.75; color: var(--text); }
+  .article-results { display: flex; flex-direction: column; gap: 8px; margin-top: 14px; }
+  .result-card {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 14px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .result-card:hover { border-color: var(--accent2); background: rgba(124,95,247,0.06); }
+  .result-card .r-title { font-size: 13px; font-weight: 500; margin-bottom: 4px; }
+  .result-card .r-meta { display: flex; gap: 8px; align-items: center; }
+  .r-tag {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    padding: 2px 7px;
+    border-radius: 4px;
+  }
+  .r-tag.shared { background: rgba(61,214,140,0.1); color: var(--shared); border: 1px solid rgba(61,214,140,0.2); }
+  .r-tag.tenant { background: rgba(167,139,250,0.1); color: var(--tenant); border: 1px solid rgba(167,139,250,0.2); }
+  .r-tags-list { font-size: 11px; color: var(--muted); }
+
+  /* FULL ARTICLE VIEW */
+  .article-full {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 20px;
+    animation: fadeIn 0.2s ease;
+  }
+  .article-full h3 { font-family: 'Syne', sans-serif; font-size: 16px; font-weight: 700; margin-bottom: 10px; }
+  .article-full pre {
+    font-family: 'Inter', sans-serif;
+    white-space: pre-wrap;
+    font-size: 13px;
+    color: #b8c0d8;
+    line-height: 1.8;
+  }
+  .close-btn {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 11px;
+    cursor: pointer;
+    float: right;
+    margin-top: -4px;
+  }
+  .close-btn:hover { border-color: var(--red); color: var(--red); }
+
+  .timing { font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: var(--muted); margin-left: auto; }
+  .denied-banner {
+    background: rgba(242,92,92,0.08);
+    border: 1px solid rgba(242,92,92,0.25);
+    border-radius: 8px;
+    padding: 12px 14px;
+    color: var(--red);
+    font-size: 13px;
+    font-family: 'IBM Plex Mono', monospace;
+  }
+
+  .legend { display: flex; gap: 14px; flex-wrap: wrap; padding-top: 4px; }
+  .legend-item { display: flex; align-items: center; gap: 5px; font-size: 11px; color: var(--muted); }
+  .legend-dot { width: 8px; height: 8px; border-radius: 50%; }
+</style>
+</head>
+<body>
+<div class="app">
+
+<header>
+  <div class="logo">help<span>desk</span>.mcp</div>
+  <div class="badge">MCP SIMULATOR v1.0</div>
+  <div class="tag">model context protocol · help article server</div>
+</header>
+
+<!-- SIDEBAR -->
+<aside>
+  <div>
+    <div class="section-label">Select Tenant</div>
+    <button class="tenant-btn active" onclick="selectTenant('acme', this)" id="btn-acme">
+      <span class="dot" style="background:#4f8ef7"></span>
+      Acme Corp
+      <span class="tid">acme</span>
+    </button>
+    <button class="tenant-btn" onclick="selectTenant('globex', this)" id="btn-globex">
+      <span class="dot" style="background:#a78bfa"></span>
+      Globex Inc
+      <span class="tid">globex</span>
+    </button>
+
+    <div style="margin-top:16px">
+      <div class="legend">
+        <div class="legend-item"><div class="legend-dot" style="background:var(--shared)"></div>shared</div>
+        <div class="legend-item"><div class="legend-dot" style="background:var(--tenant)"></div>tenant-own</div>
+        <div class="legend-item"><div class="legend-dot" style="background:var(--red);opacity:.5"></div>locked</div>
+      </div>
+    </div>
+  </div>
+
+  <div>
+    <div class="section-label">Articles visible to tenant</div>
+    <div class="articles-list" id="articles-list"></div>
+  </div>
+</aside>
+
+<!-- MAIN -->
+<main>
+  <div class="query-area">
+    <div class="query-label">
+      You are asking as:
+      <span class="tid-pill" id="tenant-pill">acme</span>
+    </div>
+    <div class="query-row">
+      <textarea id="query-input" placeholder="Ask a question about the platform…" onkeydown="handleKey(event)"></textarea>
+      <button class="send-btn" id="send-btn" onclick="runQuery()">Ask →</button>
+    </div>
+    <div class="presets" id="presets"></div>
+  </div>
+
+  <div class="trace-panel" id="trace-panel">
+    <div class="empty-state">
+      <div class="big">⌨</div>
+      Ask a question to see the full MCP request/response trace
+    </div>
+  </div>
+</main>
+
+</div>
+
+<script>
+// ─── DATA (mirrors data/articles.js) ──────────────────────────────────────
+const articles = [
+  { id:"shared-001", tenant_id:"shared", title:"How to reset your password", tags:["password","reset","login","account"], content:`To reset your password:\n1. Go to the login page and click "Forgot Password".\n2. Enter your registered email address.\n3. Check your inbox for a reset link (valid for 30 minutes).\n4. Click the link and enter your new password.\n5. Your new password must be at least 8 characters with one uppercase letter and one number.\n\nIf you don't receive the email, check your spam folder or contact support.` },
+  { id:"shared-002", tenant_id:"shared", title:"How to invite team members", tags:["team","invite","members","users","collaboration"], content:`To invite team members to your workspace:\n1. Navigate to Settings → Team Members.\n2. Click the "Invite Member" button.\n3. Enter the email address of the person you want to invite.\n4. Select their role: Admin, Editor, or Viewer.\n5. Click Send Invite.\n\nThe invitee will receive an email with a link to join. Invites expire after 7 days.` },
+  { id:"shared-003", tenant_id:"shared", title:"Understanding your billing cycle", tags:["billing","invoice","payment","subscription","plan"], content:`Your billing cycle starts on the date you first subscribed.\n\n- Invoices are generated at the start of each cycle.\n- Payment is charged automatically to your saved card.\n- You can view all invoices under Settings → Billing.\n- To update your payment method, go to Settings → Billing → Payment Methods.\n\nIf a payment fails, you'll receive an email and have a 3-day grace period to update your card.` },
+  { id:"shared-004", tenant_id:"shared", title:"How to export your data", tags:["export","data","download","csv","backup"], content:`You can export your data at any time:\n1. Go to Settings → Data Management.\n2. Click "Export Data".\n3. Choose your export format: CSV, JSON, or Excel.\n4. Select the date range (optional).\n5. Click Generate Export — you'll receive a download link by email within minutes.\n\nExports include all your records, team activity, and configuration settings.` },
+  { id:"acme-001", tenant_id:"acme", title:"Acme onboarding: connecting your CRM", tags:["onboarding","crm","integration","salesforce","acme"], content:`Welcome to the platform, Acme team! Here's how to connect your Salesforce CRM:\n1. Go to Integrations → CRM → Salesforce.\n2. Click "Connect Salesforce" and log in with your Salesforce admin credentials.\n3. Authorize the required permissions (read contacts, write activities).\n4. Map your Salesforce fields to platform fields using the field mapper.\n5. Enable auto-sync (every 15 minutes) or trigger manual syncs.\n\nYour Acme-specific Salesforce instance URL: https://acme.salesforce.com` },
+  { id:"acme-002", tenant_id:"acme", title:"Acme custom approval workflow", tags:["approval","workflow","acme","process","custom"], content:`Acme Corp has a custom 3-step approval workflow configured:\n\nStep 1 — Team Lead Review (within 24 hrs)\nStep 2 — Finance Sign-off (within 48 hrs)\nStep 3 — Final Director Approval (within 72 hrs)\n\nTo submit for approval:\n1. Open the record and click "Submit for Approval".\n2. Add a note explaining the request.\n3. Track status in the Approvals dashboard.\n\nEscalation contacts: approvals@acme.com` },
+  { id:"globex-001", tenant_id:"globex", title:"Globex SSO setup with Okta", tags:["sso","okta","login","authentication","globex","single sign-on"], content:`Globex uses Okta for Single Sign-On. To configure SSO for new users:\n1. Log into your Okta admin dashboard.\n2. Navigate to Applications → Add Application → Search for our platform.\n3. Use these SAML settings:\n   - Entity ID: https://platform.globex.io/saml\n   - ACS URL: https://platform.globex.io/saml/callback\n4. Assign the app to users or groups in Okta.\n5. Users can now log in at platform.globex.io using their Okta credentials.\n\nContact Globex IT at it-support@globex.io for Okta admin access.` },
+  { id:"globex-002", tenant_id:"globex", title:"Globex data retention policy", tags:["data","retention","policy","compliance","globex","gdpr"], content:`Globex has configured the following data retention settings per compliance requirements:\n\n- User activity logs: retained for 12 months\n- Deleted records: permanently purged after 30 days\n- Export archives: stored for 6 months then auto-deleted\n- Audit logs: retained for 7 years (regulatory requirement)\n\nThese settings are managed by Globex's compliance team. To request a data deletion for a specific user, contact dpo@globex.io with the user ID and reason.` },
+];
+
+const PRESETS = {
+  acme:   ["How do I reset my password?", "Connect Salesforce CRM", "How does our approval workflow work?", "Export my data"],
+  globex: ["How do I log in with SSO?", "What is the data retention policy?", "How do I invite team members?", "Tell me about billing"],
+};
+
+let currentTenant = 'acme';
+let traceItems = [];
+
+// ─── TENANT ISOLATION (mirrors server/index.js) ────────────────────────────
+function normalize(s) { return s.toLowerCase().replace(/[^a-z0-9 ]/g, ''); }
+
+function scoreArticle(article, query) {
+  const terms = normalize(query).split(' ').filter(Boolean);
+  const hay = normalize(article.title + ' ' + article.content + ' ' + article.tags.join(' '));
+  return terms.filter(t => hay.includes(t)).length / terms.length;
+}
+
+function search_articles({ query, tenant_id }) {
+  const visible = articles.filter(a => a.tenant_id === 'shared' || a.tenant_id === tenant_id);
+  return visible
+    .map(a => ({ ...a, score: scoreArticle(a, query) }))
+    .filter(a => a.score > 0)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 5)
+    .map(({ score, content, ...meta }) => meta);
+}
+
+function get_article({ article_id, tenant_id }) {
+  const a = articles.find(x => x.id === article_id);
+  if (!a) throw new Error(`Article '${article_id}' not found`);
+  if (a.tenant_id !== 'shared' && a.tenant_id !== tenant_id)
+    throw new Error(`Access denied: article belongs to a different tenant`);
+  return a;
+}
+
+// ─── UI STATE ─────────────────────────────────────────────────────────────
+function selectTenant(tid, btn) {
+  currentTenant = tid;
+  document.querySelectorAll('.tenant-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('tenant-pill').textContent = tid;
+  renderSidebar();
+  renderPresets();
+  document.getElementById('query-input').value = '';
+  document.getElementById('query-input').placeholder = `Ask a question as ${tid}…`;
+  traceItems = [];
+  renderTrace();
+}
+
+function renderSidebar() {
+  const list = document.getElementById('articles-list');
+  list.innerHTML = '';
+  articles.forEach(a => {
+    const isOwn = a.tenant_id === currentTenant;
+    const isShared = a.tenant_id === 'shared';
+    const cls = isShared ? 'shared' : isOwn ? 'tenant-own' : 'locked';
+    const label = isShared ? 'shared' : isOwn ? currentTenant : '🔒 ' + a.tenant_id;
+    list.innerHTML += `<div class="art-item ${cls}">
+      <div class="art-title">${a.title}</div>
+      <div class="art-tid">${label}</div>
+    </div>`;
+  });
+}
+
+function renderPresets() {
+  const el = document.getElementById('presets');
+  el.innerHTML = (PRESETS[currentTenant] || []).map(p =>
+    `<button class="preset-chip" onclick="usePreset(this)">${p}</button>`
+  ).join('');
+}
+
+function usePreset(el) {
+  document.getElementById('query-input').value = el.textContent;
+  document.getElementById('query-input').focus();
+}
+
+function handleKey(e) {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); runQuery(); }
+}
+
+// ─── MAIN FLOW ────────────────────────────────────────────────────────────
+async function runQuery() {
+  const query = document.getElementById('query-input').value.trim();
+  if (!query) return;
+
+  const btn = document.getElementById('send-btn');
+  btn.disabled = true;
+
+  const panel = document.getElementById('trace-panel');
+  panel.innerHTML = '';
+  traceItems = [];
+
+  const t0 = Date.now();
+
+  // Step 1: Client sends MCP request
+  await addTrace({
+    type: 'client',
+    label: '1. MCP client → server',
+    title: 'Tenant sends search_articles request',
+    data: { tool: 'search_articles', parameters: { query, tenant_id: currentTenant } },
+    delay: 0,
+  });
+
+  // Step 2: Server validates & searches
+  await sleep(320);
+  await addTrace({
+    type: 'server',
+    label: '2. Server processing',
+    title: 'Validating tenant_id + filtering articles',
+    data: {
+      action: 'filter_articles',
+      visible_articles: articles
+        .filter(a => a.tenant_id === 'shared' || a.tenant_id === currentTenant)
+        .map(a => ({ id: a.id, tenant_id: a.tenant_id, title: a.title })),
+      isolation_rule: `tenant_id === 'shared' || tenant_id === '${currentTenant}'`,
+    },
+    delay: 0,
+  });
+
+  // Step 3: Search results
+  await sleep(250);
+  const results = search_articles({ query, tenant_id: currentTenant });
+  await addTrace({
+    type: 'mcp',
+    label: '3. Server → client',
+    title: `search_articles returned ${results.length} result(s)`,
+    data: { tool: 'search_articles', tenant_id: currentTenant, query, results, total: results.length },
+    delay: 0,
+  });
+
+  // Step 4: Show results / fetch top article
+  await sleep(200);
+  if (results.length === 0) {
+    addAnswerCard({ type: 'empty', query });
+  } else {
+    const top = results[0];
+    // Fetch full article
+    let fullArticle;
+    try {
+      fullArticle = get_article({ article_id: top.id, tenant_id: currentTenant });
+    } catch(e) {}
+
+    if (fullArticle) {
+      await addTrace({
+        type: 'mcp',
+        label: '4. Client → server',
+        title: `get_article("${top.id}")`,
+        data: { tool: 'get_article', parameters: { article_id: top.id, tenant_id: currentTenant } },
+        delay: 0,
+      });
+      await sleep(180);
+      await addTrace({
+        type: 'response',
+        label: '5. Server → client',
+        title: 'Full article content returned',
+        data: { tool: 'get_article', tenant_id: currentTenant, article: { id: fullArticle.id, title: fullArticle.title, tenant_id: fullArticle.tenant_id, tags: fullArticle.tags, content: fullArticle.content.slice(0, 120) + '…' } },
+        delay: 0,
+      });
+      await sleep(150);
+    }
+
+    addAnswerCard({ type: 'results', results, fullArticle, ms: Date.now() - t0 });
+  }
+
+  btn.disabled = false;
+}
+
+async function addTrace({ type, label, title, data, delay }) {
+  await sleep(delay);
+  const panel = document.getElementById('trace-panel');
+  const id = 'trace-' + Date.now() + Math.random();
+  const badge = { client:'step-client', server:'step-server', mcp:'step-mcp', response:'step-response', error:'step-error' }[type] || 'step-client';
+
+  const div = document.createElement('div');
+  div.className = 'trace-block';
+  div.innerHTML = `
+    <div class="trace-header" onclick="toggleTrace('${id}')">
+      <span class="step-badge ${badge}">${label}</span>
+      <span class="trace-title">${title}</span>
+      <span class="trace-chevron" id="chev-${id}">▾</span>
+    </div>
+    <div class="trace-body" id="${id}">
+      <pre>${syntaxHL(JSON.stringify(data, null, 2))}</pre>
+    </div>`;
+  panel.appendChild(div);
+  panel.scrollTop = panel.scrollHeight;
+}
+
+function toggleTrace(id) {
+  const el = document.getElementById(id);
+  const chev = document.getElementById('chev-' + id);
+  const hidden = el.style.display === 'none';
+  el.style.display = hidden ? 'block' : 'none';
+  chev.classList.toggle('open', !hidden);
+}
+
+function addAnswerCard({ type, results, fullArticle, ms, query }) {
+  const panel = document.getElementById('trace-panel');
+  const div = document.createElement('div');
+
+  if (type === 'empty') {
+    div.className = 'denied-banner';
+    div.textContent = `⚠ No articles found for "${query}" — try a different query.`;
+  } else {
+    div.className = 'answer-card';
+    div.innerHTML = `
+      <div class="answer-label">✦ Answer — based on ${results.length} article(s) · ${ms}ms</div>
+      ${fullArticle ? `<div class="answer-text">${fullArticle.content.replace(/\n/g,'<br>')}</div>` : ''}
+      <div class="article-results">
+        ${results.map((r, i) => `
+          <div class="result-card" onclick="openArticle('${r.id}')">
+            <div class="r-title">${i===0?'📖 ':''} ${r.title}</div>
+            <div class="r-meta">
+              <span class="r-tag ${r.tenant_id==='shared'?'shared':'tenant'}">${r.tenant_id}</span>
+              <span class="r-tags-list">${r.tags.slice(0,3).join(', ')}</span>
+            </div>
+          </div>`).join('')}
+      </div>`;
+  }
+  panel.appendChild(div);
+  panel.scrollTop = panel.scrollHeight;
+}
+
+function openArticle(id) {
+  let article;
+  try { article = get_article({ article_id: id, tenant_id: currentTenant }); }
+  catch(e) {
+    const panel = document.getElementById('trace-panel');
+    const div = document.createElement('div');
+    div.className = 'denied-banner';
+    div.textContent = `🔒 Access denied: ${e.message}`;
+    panel.appendChild(div);
+    panel.scrollTop = panel.scrollHeight;
+    return;
+  }
+  const panel = document.getElementById('trace-panel');
+  const div = document.createElement('div');
+  div.className = 'article-full';
+  div.id = 'art-full-' + id;
+  div.innerHTML = `
+    <button class="close-btn" onclick="document.getElementById('art-full-${id}').remove()">✕ close</button>
+    <div class="r-tag ${article.tenant_id==='shared'?'shared':'tenant'}" style="display:inline-block;margin-bottom:10px">${article.tenant_id}</div>
+    <h3>${article.title}</h3>
+    <pre>${article.content}</pre>`;
+  panel.appendChild(div);
+  panel.scrollTop = panel.scrollHeight;
+}
+
+function renderTrace() {
+  const panel = document.getElementById('trace-panel');
+  panel.innerHTML = `<div class="empty-state"><div class="big">⌨</div>Ask a question to see the full MCP request/response trace</div>`;
+}
+
+function syntaxHL(json) {
+  return json
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/"([^"]+)":/g, '<span class="key">"$1"</span>:')
+    .replace(/: "([^"]*)"/g, ': <span class="str">"$1"</span>')
+    .replace(/: (\d+\.?\d*)/g, ': <span class="num">$1</span>')
+    .replace(/: (true|false)/g, ': <span class="bool">$1</span>');
+}
+
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+// ─── INIT ─────────────────────────────────────────────────────────────────
+renderSidebar();
+renderPresets();
+</script>
+</body>
+</html>
