@@ -1,0 +1,23 @@
+{
+  "name": "mcpserver-tenant-qna",
+  "version": "1.0.0",
+  "description": "A multi-tenant Q&A MCP server that provides context-aware answers by leveraging tenant-specific knowledge bases",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "node index.js"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "multi-tenant",
+    "qna",
+    "helpdesk"
+  ],
+  "author": "anupriya-babbar",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
