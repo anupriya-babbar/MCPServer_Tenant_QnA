@@ -4,7 +4,7 @@
  * Supports: shared articles + per-tenant articles
  */
 
-import { articles } from "../data/articles.js";
+import { articles } from "./articles.js";
 
 // ---------- core search logic ----------
 
