@@ -106,3 +106,48 @@ export const manifest = {
     },
   ],
 };
+
+/**
+ * Vercel Serverless Function Handler
+ */
+export default function handler(req, res) {
+  // Health check endpoint
+  if (req.method === "GET" && req.url === "/") {
+    return res.status(200).json({
+      status: "healthy",
+      service: "MCP Help Article Server",
+      version: "1.0.0",
+      tools: manifest.tools.map((t) => t.name),
+    });
+  }
+
+  // Search articles endpoint
+  if (req.method === "POST" && req.url === "/search") {
+    try {
+      const { query, tenant_id } = req.body;
+      const result = search_articles({ query, tenant_id });
+      return res.status(200).json(result);
+    } catch (error) {
+      return res.status(400).json({ error: error.message });
+    }
+  }
+
+  // Get article endpoint
+  if (req.method === "POST" && req.url === "/get") {
+    try {
+      const { article_id, tenant_id } = req.body;
+      const result = get_article({ article_id, tenant_id });
+      return res.status(200).json(result);
+    } catch (error) {
+      return res.status(400).json({ error: error.message });
+    }
+  }
+
+  // Manifest endpoint
+  if (req.method === "GET" && req.url === "/manifest") {
+    return res.status(200).json(manifest);
+  }
+
+  // 404 for unknown routes
+  res.status(404).json({ error: "Not found" });
+}
